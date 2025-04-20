@@ -12,20 +12,25 @@ pub struct IssueReaction {
     pub user: User,
 }
 
-pub async fn get_issue_reaction(owner: &str, repo: &str, number: usize) -> Vec<IssueReaction> {
-    let token = std::env::var("GITHUB_PAT").expect("expected GITHUB_PAT in .env file");
+pub(crate) async fn get_issue_reactions(
+    client: &reqwest::Client,
+    token: &str,
+    user_agent: &str,
+    owner: &str,
+    repository: &str,
+    number: usize,
+) -> Vec<IssueReaction> {
     let request_url = format!(
         "https://api.github.com/repos/{owner}/{repo}/issues/{issue_number}/reactions",
         owner = owner,
-        repo = repo,
+        repo = repository,
         issue_number = number,
     );
 
-    let client = reqwest::Client::new();
     let response = client
         .get(&request_url)
         .header(AUTHORIZATION, format!("Bearer {token}", token = token))
-        .header(USER_AGENT, "rust-issue-tracker")
+        .header(USER_AGENT, user_agent)
         .header(ACCEPT, "application/vnd.github+json")
         .send()
         .await

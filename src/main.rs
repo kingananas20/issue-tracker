@@ -1,11 +1,11 @@
-mod get_issue_reaction;
+mod get_issue_reactions;
 mod get_issues;
+mod github_api;
 
 use clap::Parser;
 use colored::{Color, Colorize};
 use dotenv::dotenv;
-use get_issue_reaction::get_issue_reaction;
-use get_issues::get_issues;
+use github_api::GitHubAPI;
 
 /// program to get all the issues on a github repository
 #[derive(Debug, Parser)]
@@ -23,14 +23,18 @@ async fn main() {
     dotenv().ok();
     let cli = Cli::parse();
 
+    let token = std::env::var("GITHUB_PAT").expect("expected GITHUB_PAT in .env file");
+    let user_agent = std::env::var("USER_AGENT").expect("expected USER_AGENT in .env file");
     let owner = cli.owner;
-    let repo = cli.repository;
+    let repository = cli.repository;
 
-    let issues = get_issues(&owner, &repo, None).await;
+    let github_api = GitHubAPI::new(token, user_agent, owner, repository);
+
+    let issues = github_api.get_issues(None).await;
     println!("Amount of issues: {:?}", issues.len());
 
     for issue in &issues {
-        let reactions = get_issue_reaction(&owner, &repo, issue.number).await;
+        let reactions = github_api.get_issue_reactions(issue.number).await;
         let mut thumbs_up_count = 0;
 
         for reaction in &reactions {

@@ -12,27 +12,37 @@ pub struct Issue {
     pub pull_request: Option<PullRequest>,
 }
 
-pub fn get_issues_wrapper<'a>(
+fn get_issues_wrapper<'a>(
+    client: &'a reqwest::Client,
+    token: &'a str,
+    user_agent: &'a str,
     owner: &'a str,
-    repo: &'a str,
+    repository: &'a str,
     url: Option<String>,
 ) -> BoxFuture<'a, Vec<Issue>> {
-    Box::pin(get_issues(owner, repo, url))
+    Box::pin(get_issues(
+        client, token, user_agent, owner, repository, url,
+    ))
 }
 
-pub async fn get_issues(owner: &str, repo: &str, url: Option<String>) -> Vec<Issue> {
-    let token = std::env::var("GITHUB_PAT").expect("expected GITHUB_PAT in .env file");
+pub(crate) async fn get_issues(
+    client: &reqwest::Client,
+    token: &str,
+    user_agent: &str,
+    owner: &str,
+    repository: &str,
+    url: Option<String>,
+) -> Vec<Issue> {
     let request_url = url.unwrap_or(format!(
         "https://api.github.com/repos/{owner}/{repo}/issues?state=open&page=1&per_page=100",
         owner = owner,
-        repo = repo,
+        repo = repository,
     ));
 
-    let client = reqwest::Client::new();
     let response = client
         .get(&request_url)
         .header(AUTHORIZATION, format!("Bearer {token}", token = token))
-        .header(USER_AGENT, "rust-issue-tracker")
+        .header(USER_AGENT, format!("{}", user_agent))
         .header(ACCEPT, "application/vnd.github+json")
         .send()
         .await
@@ -53,7 +63,8 @@ pub async fn get_issues(owner: &str, repo: &str, url: Option<String>) -> Vec<Iss
         .collect::<Vec<Issue>>();
 
     if let Some(new_url) = new_url {
-        let more_issues = get_issues_wrapper(owner, repo, Some(new_url)).await;
+        let more_issues =
+            get_issues_wrapper(client, token, user_agent, owner, repository, Some(new_url)).await;
         return issues.into_iter().chain(more_issues).collect();
     }
 
