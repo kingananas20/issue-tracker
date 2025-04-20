@@ -1,23 +1,36 @@
 mod get_issue_reaction;
 mod get_issues;
 
+use clap::Parser;
 use colored::{Color, Colorize};
 use dotenv::dotenv;
 use get_issue_reaction::get_issue_reaction;
 use get_issues::get_issues;
 
+/// program to get all the issues on a github repository
+#[derive(Debug, Parser)]
+#[command(version, about, long_about = None)]
+struct Cli {
+    /// Owner of the repository
+    owner: String,
+
+    /// Repository name
+    repository: String,
+}
+
 #[tokio::main]
 async fn main() {
     dotenv().ok();
+    let cli = Cli::parse();
 
-    let owner = "FlorianWoelki";
-    let repo = "obsidian-iconize";
+    let owner = cli.owner;
+    let repo = cli.repository;
 
-    let issues = get_issues(owner, repo, None).await;
+    let issues = get_issues(&owner, &repo, None).await;
     println!("Amount of issues: {:?}", issues.len());
 
     for issue in &issues {
-        let reactions = get_issue_reaction(owner, repo, issue.number).await;
+        let reactions = get_issue_reaction(&owner, &repo, issue.number).await;
         let mut thumbs_up_count = 0;
 
         for reaction in &reactions {
