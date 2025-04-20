@@ -35,12 +35,12 @@ pub async fn get_issues(owner: &str, repo: &str, url: Option<String>) -> Vec<Iss
         .header(USER_AGENT, "rust-issue-tracker")
         .header(ACCEPT, "application/vnd.github+json")
         .send()
-        .await;
+        .await
+        .expect("error while fetching");
 
-    let response = match response {
-        Ok(res) if res.status().is_success() => res,
-        _ => return Vec::new(),
-    };
+    if !response.status().is_success() {
+        return Vec::new();
+    }
 
     let new_url = construct_new_url(&response.headers());
 
@@ -61,18 +61,17 @@ pub async fn get_issues(owner: &str, repo: &str, url: Option<String>) -> Vec<Iss
 }
 
 fn construct_new_url(headers: &HeaderMap) -> Option<String> {
-    headers.get("link").and_then(|link_header| {
-        link_header.to_str().ok().and_then(|link_value| {
-            link_value.contains("rel=\"next\"").then(|| {
-                link_value
-                    .split(';')
-                    .collect::<Vec<&str>>()
-                    .get(0)
-                    .expect("could not find new url with page")
-                    .trim_start_matches("<")
-                    .trim_end_matches(">")
-                    .to_string()
-            })
-        })
-    })
+    let link_header = headers.get("link")?.to_str().ok()?;
+
+    for part in link_header.split(",").collect::<Vec<&str>>() {
+        if part.contains("rel=\"next\"") {
+            return Some(
+                part.trim_start_matches("<")
+                    .trim_end_matches(">; rel=\"next\"")
+                    .to_string(),
+            );
+        }
+    }
+
+    None
 }

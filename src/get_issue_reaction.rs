@@ -15,7 +15,7 @@ pub struct IssueReaction {
 pub async fn get_issue_reaction(owner: &str, repo: &str, number: usize) -> Vec<IssueReaction> {
     let token = std::env::var("GITHUB_PAT").expect("expected GITHUB_PAT in .env file");
     let request_url = format!(
-        "https://api.github.com/repo/{owner}/{repo}/issues/{issue_number}/reactions",
+        "https://api.github.com/repos/{owner}/{repo}/issues/{issue_number}/reactions",
         owner = owner,
         repo = repo,
         issue_number = number,
@@ -28,12 +28,12 @@ pub async fn get_issue_reaction(owner: &str, repo: &str, number: usize) -> Vec<I
         .header(USER_AGENT, "rust-issue-tracker")
         .header(ACCEPT, "application/vnd.github+json")
         .send()
-        .await;
+        .await
+        .expect("error while fetching");
 
-    let response = match response {
-        Ok(res) if res.status().is_success() => res,
-        _ => return Vec::new(),
-    };
+    if !response.status().is_success() {
+        return Vec::new();
+    }
 
     let reactions = response
         .json::<Vec<IssueReaction>>()

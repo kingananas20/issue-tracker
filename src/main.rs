@@ -13,8 +13,6 @@ async fn main() {
     let owner = "FlorianWoelki";
     let repo = "obsidian-iconize";
 
-    println!("{:?}", get_issue_reaction(owner, repo, 128).await);
-
     let issues = get_issues(owner, repo, None).await;
     println!("Amount of issues: {:?}", issues.len());
 
