@@ -49,6 +49,8 @@ pub(crate) async fn get_issues(
         .expect("error while fetching");
 
     if !response.status().is_success() {
+        println!("Responses status: {}", response.status().as_u16());
+        println!("Headers: {:?}", response.headers());
         return Vec::new();
     }
 
